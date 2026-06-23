@@ -24,9 +24,14 @@ default_data = {
 }
 
 # Mobile input form to dynamically change values
-updated_data = {"Level": ["Yearly", "Monthly", "Weekly", "Daily"]}
 for col in ["H4", "H3", "L3", "L4", "TC", "CP", "BC"]:
-    updated_data[col] = []
+    # text_input பயன்படுத்தினால் மொபைலில் சாதாரணமாக டைப் செய்ய முடியும்
+    val_str = st.text_input(f"{tf} {col}", value=str(default_data[col][d_idx]), key=f"{tf}_{col}")
+    # டைப் செய்த பின் அதை எண்களாக (Float) மாற்றும்
+    try:
+        updated_data[col].append(float(val_str))
+    except ValueError:
+        updated_data[col].append(0.0)
 
 # Dynamic input fields per timeframe
 for tf in ["Yearly", "Monthly", "Weekly", "Daily"]:
@@ -37,7 +42,11 @@ for tf in ["Yearly", "Monthly", "Weekly", "Daily"]:
             updated_data[col].append(val)
 
 # Dynamic LTP Close price input
-market_close_price = st.number_input("🔴 Today's Market Close Price (LTP)", value=23824.10, format="%.2f")
+market_close_str = st.text_input("🔴 Today's Market Close Price (LTP)", value="23824.10")
+try:
+    market_close_price = float(market_close_str)
+except ValueError:
+    market_close_price = 23824.10
 
 # Build DataFrame
 df = pd.DataFrame(updated_data)
@@ -104,3 +113,8 @@ st.pyplot(chart_figure)
 # --- 4. Interactive Data Table Output View ---
 st.subheader("📋 Active Data Table")
 st.dataframe(df.set_index("Level"), use_container_width=True)
+
+# --- PDF Download Button Functionality ---
+st.subheader("📥 Download Analysis Report")
+with open("advanced_market_levels.pdf", "rb") as pdf_file:
+    st.download_button(label="Download PDF Report", data=pdf_file, file_name="Market_Levels_Analysis.pdf", mime="application/pdf")
