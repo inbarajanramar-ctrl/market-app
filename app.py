@@ -122,7 +122,7 @@ def plot_plotly_mobile_engine(plot_df, ltp):
         fig.add_trace(go.Scatter(x=[idx-0.25, idx+0.25], y=[ltp, ltp], mode="lines", line=dict(color="#dc143c", width=1.5), showlegend=False))
         fig.add_trace(go.Scatter(x=[idx], y=[ltp], mode="markers", marker=dict(color="#dc143c", size=7), showlegend=False))
 
-    # LTP மார்க்கர் கடைசிப் பகுதியில் மட்டும் லேபிள் காட்ட
+    # எரர் சரிசெய்யப்பட்ட LTP மார்க்கர் லேபிள் (font_color பயன்படுத்தப்பட்டுள்ளது)
     fig.add_trace(go.Scatter(x=[len(plot_df)-1], y=[ltp], mode="text", text=[f'LTP: {ltp:.2f}'], textposition="middle right", font=dict(color="#dc143c", size=10), showlegend=False))
 
     # 5. ஆட்டோமேட்டிக் Confluence Zone
@@ -137,24 +137,4 @@ def plot_plotly_mobile_engine(plot_df, ltp):
             for dk in all_keys:
                 if abs(w_row[wk] - d_row[dk]) / w_row[wk] <= 0.0015:
                     y_min, y_max = min(w_row[wk], d_row[dk]), max(w_row[wk], d_row[dk])
-                    fig.add_shape(type="rect", x0=w_idx, y0=y_min-5, x1=d_idx, y1=y_max+5, fillcolor="#ff00ff", opacity=0.1, line_width=0)
-
-    # 6. மொபைல் வியூ மற்றும் ஆட்டோ-ஜூம் வடிவமைப்பு (விடுபட்ட பகுதி சேர்க்கப்பட்டுள்ளது)
-    min_p, max_p = min(all_prices), max(all_prices)
-    padding = (max_p - min_p) * 0.08
-    
-    fig.update_layout(
-        xaxis=dict(tickvals=list(range(len(plot_df))), ticktext=x_labels, tickfont=dict(size=10, weight="bold"), fixedrange=True),
-        yaxis=dict(range=[min_p - padding, max_p + padding], gridcolor="#eeeeee"),
-        margin=dict(l=15, r=45, t=20, b=20),
-        plot_bgcolor="white",
-        dragmode="pan"
-    )
-    return fig
-
-# திரையில் இன்டராக்டிவ் சார்ட்டைக் காட்டுதல்
-st.plotly_chart(plot_plotly_mobile_engine(sub_df, market_close_price), use_container_width=True, config={'scrollZoom': True})
-
-# --- 5. டேபிள் காட்டுகின்ற பகுதி ---
-st.subheader("📋 Active Data Table")
-st.dataframe(df.set_index("Level"), use_container_width=True)
+                    fig.add_shape(type="rect", x0=w_idx, y0=y_min-5, x1=d_idx, y1=y_max+5, fill
