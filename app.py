@@ -41,7 +41,7 @@ for tf in updated_data["Level"]:
                 updated_data[col].append(0.0)
 
 # மார்க்கெட் க்ளோஸ் பிரைஸ் இன்புட் (LTP)
-market_close_str = st.text_input("🔴 Today's Market Close Price (LTP)", value="24021.65")
+market_close_str = st.text_input("🔴 Today's Market Close Price (LTP)", value="24056.00")
 try:
     market_close_price = float(market_close_str)
 except ValueError:
