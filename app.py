@@ -1,6 +1,7 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 import pandas as pd
+from matplotlib.backends.backend_pdf import PdfPages
 
 # மொபைலுக்கு ஏற்றவாறு பக்கத்தை அமைத்தல்
 st.set_page_config(page_title="Multi-Pivot Matrix Tool", layout="centered")
@@ -82,14 +83,15 @@ w_rel_title, w_rel_desc = detect_pivot_relationship(
 st.info(f"**📅 Intraday View (Prev Daily ➔ Pres Daily):** {d_rel_title}\n\n💡 *{d_rel_desc}*")
 st.success(f"**⏳ Swing View (Prev Weekly ➔ Pres Weekly):** {w_rel_title}\n\n💡 *{w_rel_desc}*")
 
-# --- 3. வியூ பட்டன்கள் ---
+# --- 3. நீங்கள் கேட்ட புதிய வியூ பட்டன்கள் ---
 st.subheader("🎯 View Perspective")
-selected_tab = st.radio("Select View Range:", ["Full Structure View", "Tactical Present View (W & D)"], horizontal=True)
+selected_tab = st.radio("Select View Range:", ["Full Structure View", "Tactical Focus View (W & D)"], horizontal=True)
 
 if selected_tab == "Full Structure View":
     sub_df = df.copy()
 else:
-    sub_df = df[df["Level"].isin(["Present Weekly", "Present Daily"])].reset_index(drop=True)
+    # நீங்கள் கேட்டபடி முந்தைய/இப்போதைய வாரம் மற்றும் முந்தைய/இப்போதைய நாள் மட்டும் காட்டும் ফিল্টার
+    sub_df = df[df["Level"].isin(["Previous Weekly", "Present Weekly", "Previous Daily", "Present Daily"])].reset_index(drop=True)
 
 # --- 4. நிலையான Matplotlib சார்ட் என்ஜின் ---
 def plot_mobile_engine(plot_df, ltp):
@@ -102,7 +104,7 @@ def plot_mobile_engine(plot_df, ltp):
         x = x_positions[idx]
         all_prices.extend([row["H4"], row["H3"], row["L3"], row["L4"], row["TC"], row["CP"], row["BC"]])
 
-        # Camarilla
+        # Camarilla Highs & Lows
         ax.hlines(y=row["H4"], xmin=x - bar_width, xmax=x + bar_width, colors="blue", linewidth=2.5)
         ax.text(x, row["H4"] + 12, f'{row["H4"]:.1f}', ha="center", va="bottom", fontsize=8, color="blue", weight="bold")
         ax.hlines(y=row["H3"], xmin=x - bar_width, xmax=x + bar_width, colors="orange", linewidth=2.5)
@@ -112,7 +114,7 @@ def plot_mobile_engine(plot_df, ltp):
         ax.hlines(y=row["L4"], xmin=x - bar_width, xmax=x + bar_width, colors="blue", linestyles="--", linewidth=2)
         ax.text(x, row["L4"] - 12, f'{row["L4"]:.1f}', ha="center", va="top", fontsize=8, color="blue", weight="bold")
 
-        # CPR
+        # CPR Channels
         ax.hlines(y=row["TC"], xmin=x - bar_width, xmax=x + bar_width, colors="purple", linestyles=":", linewidth=1.5)
         ax.hlines(y=row["CP"], xmin=x - bar_width, xmax=x + bar_width, colors="purple", linestyles="-.", linewidth=2)
         ax.hlines(y=row["BC"], xmin=x - bar_width, xmax=x + bar_width, colors="purple", linestyles=":", linewidth=1.5)
@@ -128,14 +130,12 @@ def plot_mobile_engine(plot_df, ltp):
     if "Present Weekly" in plot_df["Level"].values and "Present Daily" in plot_df["Level"].values:
         w_row = plot_df[plot_df["Level"] == "Present Weekly"].iloc[0]
         d_row = plot_df[plot_df["Level"] == "Present Daily"].iloc[0]
-        w_idx = list(plot_df["Level"]).index("Present Weekly")
-        d_idx = list(plot_df["Level"]).index("Present Daily")
         all_keys = ["H4", "H3", "L3", "L4", "TC", "CP", "BC"]
         for wk in all_keys:
             for dk in all_keys:
                 if abs(w_row[wk] - d_row[dk]) / w_row[wk] <= 0.0015:
                     y_min, y_max = min(w_row[wk], d_row[dk]), max(w_row[wk], d_row[dk])
-                    ax.axhspan(y_min - 6, y_max + 6, xmin=0.4, xmax=0.9, color="#ff00ff", alpha=0.1)
+                    ax.axhspan(y_min - 6, y_max + 6, xmin=0.2, xmax=0.9, color="#ff00ff", alpha=0.1)
 
     ax.set_xticks(x_positions)
     ax.set_xticklabels(plot_df["Level"], fontsize=9.5, weight="bold")
@@ -154,3 +154,20 @@ st.pyplot(plot_mobile_engine(sub_df, market_close_price))
 # --- 5. டேபிள் காட்டுகின்ற பகுதி ---
 st.subheader("📋 Active Data Table")
 st.dataframe(df.set_index("Level"), use_container_width=True)
+
+# --- 6. PDF டவுன்லோடு செய்யும் வசதி (பட்டன் சேர்க்கப்பட்டுள்ளது) ---
+st.subheader("📥 Download Analysis Report")
+
+pdf_path = "Multi_Pivot_Analysis_Report.pdf"
+with PdfPages(pdf_path) as pdf:
+    # PDF-ல் இரண்டு வியூ சார்ட்டுகளும் தனித்தனி பக்கங்களாகச் சேமிக்கப்படும்
+    for view_name, plot_data in [("Full View Structure", df), 
+                                 ("Tactical Focus (W and D)", df[df["Level"].isin(["Previous Weekly", "Present Weekly", "Previous Daily", "Present Daily"])])]:
+        fig_pdf = plot_mobile_engine(plot_data.reset_index(drop=True), market_close_price)
+        plt.title(f"Market Analysis - {view_name}", fontsize=11, weight="bold", pad=12)
+        pdf.savefig(fig_pdf)
+        plt.close()
+
+# பிடிஎஃப் டவுன்லோடு பட்டன்
+with open(pdf_path, "rb") as pdf_file:
+    st.download_button(label="Download PDF Matrix Report", data=pdf_file, file_name="Multi_Pivot_Matrix_Report.pdf", mime="application/pdf")
