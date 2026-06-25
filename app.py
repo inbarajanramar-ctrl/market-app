@@ -1,17 +1,17 @@
 import streamlit as st
+import matplotlib.pyplot as plt
 import pandas as pd
-import plotly.graph_objects as go
 
 # மொபைலுக்கு ஏற்றவாறு பக்கத்தை அமைத்தல்
 st.set_page_config(page_title="Multi-Pivot Matrix Tool", layout="centered")
 
 st.title("📊 Multi-Pivot Matrix Engine")
-st.write("Compare Present vs Previous Frameworks with Mobile Pinch-to-Zoom")
+st.write("Compare Present vs Previous Frameworks")
 
 # --- 1. லெவல்களை மாற்றும் பகுதி (Sidebar input panel) ---
 st.sidebar.header("📝 Edit Matrix Data")
 
-# புதுப்பிக்கப்பட்ட முந்தைய வார எண்கள் அடங்கிய ஆரம்பகால தரவுகள் (Handwritten + New Weekly Data)
+# புதுப்பிக்கப்பட்ட எண்கள் அடங்கிய ஆரம்பகால தரவுகள்
 default_data = {
     "Level": ["Yearly", "Present Monthly", "Previous Weekly", "Present Weekly", "Previous Daily", "Present Daily"],
     "H4": [28649.78, 24218.50, 23939.26, 24217.40, 24016.90, 24187.09],
@@ -28,7 +28,7 @@ updated_data = {"Level": ["Yearly", "Present Monthly", "Previous Weekly", "Prese
 for col in ["H4", "H3", "L3", "L4", "TC", "CP", "BC"]:
     updated_data[col] = []
 
-# ஒவ்வொரு பிரிவிற்கும் இன்புட் பாக்ஸ்கள் (குழப்பமில்லாத மேப்பிங் குறியீட்டுடன்)
+# ஒவ்வொரு பிரிவிற்கும் இன்புட் பாக்ஸ்கள் ( text_input மொபைலில் எளிதாக டைப் செய்ய)
 for tf in updated_data["Level"]:
     with st.sidebar.expander(f"Modify {tf} Levels", expanded=(tf in ["Present Daily", "Previous Daily"])):
         d_idx = default_data["Level"].index(tf)
@@ -91,69 +91,65 @@ if selected_tab == "Full Structure View":
 else:
     sub_df = df[df["Level"].isin(["Present Weekly", "Present Daily"])].reset_index(drop=True)
 
-# --- 4. Plotly இன்டрак்டிவ் மொபைல் ஜூம் என்ஜின் ---
-def plot_plotly_mobile_engine(plot_df, ltp):
-    fig = go.Figure()
+# --- 4. நிலையான Matplotlib சார்ட் என்ஜின் ---
+def plot_mobile_engine(plot_df, ltp):
+    fig, ax = plt.subplots(figsize=(10, 6.5))
+    x_positions = range(len(plot_df))
+    bar_width = 0.4
     all_prices = [ltp]
-    x_labels = list(plot_df["Level"])
-    
+
     for idx, row in plot_df.iterrows():
+        x = x_positions[idx]
         all_prices.extend([row["H4"], row["H3"], row["L3"], row["L4"], row["TC"], row["CP"], row["BC"]])
-        
-        # 1. Camarilla Highs
-        fig.add_trace(go.Scatter(x=[idx-0.25, idx+0.25], y=[row["H4"], row["H4"]], mode="lines+text",
-                                 line=dict(color="#0044ff", width=3), text=[f'{row["H4"]:.1f}', ""], textposition="top center", showlegend=False))
-        fig.add_trace(go.Scatter(x=[idx-0.25, idx+0.25], y=[row["H3"], row["H3"]], mode="lines+text",
-                                 line=dict(color="#ff8800", width=3), text=[f'{row["H3"]:.1f}', ""], textposition="top center", showlegend=False))
-        
-        # 2. Camarilla Lows
-        fig.add_trace(go.Scatter(x=[idx-0.25, idx+0.25], y=[row["L3"], row["L3"]], mode="lines+text",
-                                 line=dict(color="#ff8800", width=2, dash="dash"), text=[f'{row["L3"]:.1f}', ""], textposition="bottom center", showlegend=False))
-        fig.add_trace(go.Scatter(x=[idx-0.25, idx+0.25], y=[row["L4"], row["L4"]], mode="lines+text",
-                                 line=dict(color="#0044ff", width=2, dash="dash"), text=[f'{row["L4"]:.1f}', ""], textposition="bottom center", showlegend=False))
-        
-        # 3. CPR Channels
-        fig.add_trace(go.Scatter(x=[idx-0.25, idx+0.25], y=[row["TC"], row["TC"]], mode="lines", line=dict(color="#8800cc", width=1, dash="dot"), showlegend=False))
-        fig.add_trace(go.Scatter(x=[idx-0.25, idx+0.25], y=[row["CP"], row["CP"]], mode="lines+text", line=dict(color="#8800cc", width=2, dash="dashdot"),
-                                 text=[f'CP:{row["CP"]:.1f}', ""], textposition="middle left", showlegend=False))
-        fig.add_trace(go.Scatter(x=[idx-0.25, idx+0.25], y=[row["BC"], row["BC"]], mode="lines", line=dict(color="#8800cc", width=1, dash="dot"), showlegend=False))
-        
-        # 4. LTP Close Markers
-        fig.add_trace(go.Scatter(x=[idx-0.25, idx+0.25], y=[ltp, ltp], mode="lines", line=dict(color="#dc143c", width=1.5), showlegend=False))
-        fig.add_trace(go.Scatter(x=[idx], y=[ltp], mode="markers", marker=dict(color="#dc143c", size=7), showlegend=False))
 
-    # எரர் முழுமையாகச் சரிசெய்யப்பட்ட LTP மார்க்கர் லேபிள் (font_color லெவலில் சீரமைக்கப்பட்டுள்ளது)
-    fig.add_trace(go.Scatter(x=[len(plot_df)-1], y=[ltp], mode="text", text=[f'LTP: {ltp:.2f}'], textposition="middle right", font_color="#dc143c", font=dict(size=10), showlegend=False))
+        # Camarilla
+        ax.hlines(y=row["H4"], xmin=x - bar_width, xmax=x + bar_width, colors="blue", linewidth=2.5)
+        ax.text(x, row["H4"] + 12, f'{row["H4"]:.1f}', ha="center", va="bottom", fontsize=8, color="blue", weight="bold")
+        ax.hlines(y=row["H3"], xmin=x - bar_width, xmax=x + bar_width, colors="orange", linewidth=2.5)
+        ax.text(x, row["H3"] + 12, f'{row["H3"]:.1f}', ha="center", va="bottom", fontsize=8, color="red", weight="bold")
+        ax.hlines(y=row["L3"], xmin=x - bar_width, xmax=x + bar_width, colors="orange", linestyles="--", linewidth=2)
+        ax.text(x, row["L3"] - 12, f'{row["L3"]:.1f}', ha="center", va="top", fontsize=8, color="red", weight="bold")
+        ax.hlines(y=row["L4"], xmin=x - bar_width, xmax=x + bar_width, colors="blue", linestyles="--", linewidth=2)
+        ax.text(x, row["L4"] - 12, f'{row["L4"]:.1f}', ha="center", va="top", fontsize=8, color="blue", weight="bold")
 
-    # 5. ஆட்டோமேட்டிக் Confluence Zone
+        # CPR
+        ax.hlines(y=row["TC"], xmin=x - bar_width, xmax=x + bar_width, colors="purple", linestyles=":", linewidth=1.5)
+        ax.hlines(y=row["CP"], xmin=x - bar_width, xmax=x + bar_width, colors="purple", linestyles="-.", linewidth=2)
+        ax.hlines(y=row["BC"], xmin=x - bar_width, xmax=x + bar_width, colors="purple", linestyles=":", linewidth=1.5)
+        ax.text(x - bar_width, row["CP"], f' CP:{row["CP"]:.1f}', ha="left", va="center", fontsize=7.5, color="purple")
+
+        # LTP Line
+        ax.hlines(y=ltp, xmin=x - bar_width, xmax=x + bar_width, colors="crimson", linestyles="-", linewidth=1.2, alpha=0.7)
+        ax.plot(x, ltp, marker="o", color="crimson", markersize=5)
+        if idx == len(plot_df) - 1:
+            ax.text(x + bar_width + 0.02, ltp, f'LTP:{ltp}', va="center", ha="left", color="crimson", weight="bold", fontsize=8.5)
+
+    # Confluence Shading (Pink Bands)
     if "Present Weekly" in plot_df["Level"].values and "Present Daily" in plot_df["Level"].values:
         w_row = plot_df[plot_df["Level"] == "Present Weekly"].iloc[0]
         d_row = plot_df[plot_df["Level"] == "Present Daily"].iloc[0]
         w_idx = list(plot_df["Level"]).index("Present Weekly")
         d_idx = list(plot_df["Level"]).index("Present Daily")
-        
         all_keys = ["H4", "H3", "L3", "L4", "TC", "CP", "BC"]
         for wk in all_keys:
             for dk in all_keys:
                 if abs(w_row[wk] - d_row[dk]) / w_row[wk] <= 0.0015:
                     y_min, y_max = min(w_row[wk], d_row[dk]), max(w_row[wk], d_row[dk])
-                    fig.add_shape(type="rect", x0=w_idx, y0=y_min-5, x1=d_idx, y1=y_max+5, fillcolor="#ff00ff", opacity=0.1, line_width=0)
+                    ax.axhspan(y_min - 6, y_max + 6, xmin=0.4, xmax=0.9, color="#ff00ff", alpha=0.1)
 
-    # 6. மொபைல் வியூ வடிவமைப்பு
+    ax.set_xticks(x_positions)
+    ax.set_xticklabels(plot_df["Level"], fontsize=9.5, weight="bold")
+    ax.grid(True, linestyle=":", alpha=0.4)
+    ax.set_xlim(-0.5, len(plot_df) - 0.5)
+    
+    # Auto-Zoom
     min_p, max_p = min(all_prices), max(all_prices)
     padding = (max_p - min_p) * 0.08
-    
-    fig.update_layout(
-        xaxis=dict(tickvals=list(range(len(plot_df))), ticktext=x_labels, tickfont=dict(size=10, weight="bold"), fixedrange=True),
-        yaxis=dict(range=[min_p - padding, max_p + padding], gridcolor="#eeeeee"),
-        margin=dict(l=15, r=45, t=20, b=20),
-        plot_bgcolor="white",
-        dragmode="pan"
-    )
+    ax.set_ylim(min_p - padding, max_p + padding)
+    plt.tight_layout()
     return fig
 
-# திரையில் இன்டராக்டிவ் சார்ட்டைக் காட்டுதல்
-st.plotly_chart(plot_plotly_mobile_engine(sub_df, market_close_price), use_container_width=True, config={'scrollZoom': True})
+st.pyplot(plot_mobile_engine(sub_df, market_close_price))
 
 # --- 5. டேபிள் காட்டுகின்ற பகுதி ---
 st.subheader("📋 Active Data Table")
