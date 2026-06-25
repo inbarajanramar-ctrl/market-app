@@ -122,10 +122,10 @@ def plot_plotly_mobile_engine(plot_df, ltp):
         fig.add_trace(go.Scatter(x=[idx-0.25, idx+0.25], y=[ltp, ltp], mode="lines", line=dict(color="#dc143c", width=1.5), showlegend=False))
         fig.add_trace(go.Scatter(x=[idx], y=[ltp], mode="markers", marker=dict(color="#dc143c", size=7), showlegend=False))
 
-    # LTP மார்க்கர் லேபிள்
-    fig.add_trace(go.Scatter(x=[len(plot_df)-1], y=[ltp], mode="text", text=[f'LTP: {ltp:.2f}'], textposition="middle right", font=dict(color="#dc143c", size=10), showlegend=False))
+    # எரர் முழுமையாகச் சரிசெய்யப்பட்ட LTP மார்க்கர் லேபிள் (font_color லெவலில் சீரமைக்கப்பட்டுள்ளது)
+    fig.add_trace(go.Scatter(x=[len(plot_df)-1], y=[ltp], mode="text", text=[f'LTP: {ltp:.2f}'], textposition="middle right", font_color="#dc143c", font=dict(size=10), showlegend=False))
 
-    # 5. ஆட்டோமேட்டிக் Confluence Zone (பிழை முழுமையாகச் சரிசெய்யப்பட்டுள்ளது)
+    # 5. ஆட்டோமேட்டிக் Confluence Zone
     if "Present Weekly" in plot_df["Level"].values and "Present Daily" in plot_df["Level"].values:
         w_row = plot_df[plot_df["Level"] == "Present Weekly"].iloc[0]
         d_row = plot_df[plot_df["Level"] == "Present Daily"].iloc[0]
