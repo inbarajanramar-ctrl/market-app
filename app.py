@@ -11,7 +11,7 @@ st.write("Compare Present vs Previous Frameworks with Mobile Pinch-to-Zoom")
 # --- 1. லெவல்களை மாற்றும் பகுதி (Sidebar input panel) ---
 st.sidebar.header("📝 Edit Matrix Data")
 
-# ஆரம்பகால தரவுகள் (Handwritten Table Data)
+# புதுப்பிக்கப்பட்ட முந்தைய வார எண்கள் அடங்கிய ஆரம்பகால தரவுகள் (Handwritten + New Weekly Data)
 default_data = {
     "Level": ["Yearly", "Present Monthly", "Previous Weekly", "Present Weekly", "Previous Daily", "Present Daily"],
     "H4": [28649.78, 24218.50, 23939.26, 24217.40, 24016.90, 24187.09],
@@ -23,12 +23,12 @@ default_data = {
     "BC": [24034.73, 23655.94, 23357.75, 24003.53, 23869.47, 23939.65]
 }
 
-# புதிய எண்களைச் சேமிப்பதற்கான டிக்ஸ்னரி (வரிசைமுறை துல்லியமாக சீரமைக்கப்பட்டுள்ளது)
+# புதிய எண்களைச் சேமிப்பதற்கான டிக்ஸ்னரி
 updated_data = {"Level": ["Yearly", "Present Monthly", "Previous Weekly", "Present Weekly", "Previous Daily", "Present Daily"]}
 for col in ["H4", "H3", "L3", "L4", "TC", "CP", "BC"]:
     updated_data[col] = []
 
-# ஒவ்வொரு பிரிவிற்கும் இன்புட் பாக்ஸ்கள் (முறையான குறியீட்டுடன்)
+# ஒவ்வொரு பிரிவிற்கும் இன்புட் பாக்ஸ்கள் (குழப்பமில்லாத மேப்பிங் குறியீட்டுடன்)
 for tf in updated_data["Level"]:
     with st.sidebar.expander(f"Modify {tf} Levels", expanded=(tf in ["Present Daily", "Previous Daily"])):
         d_idx = default_data["Level"].index(tf)
@@ -143,18 +143,4 @@ def plot_plotly_mobile_engine(plot_df, ltp):
     min_p, max_p = min(all_prices), max(all_prices)
     padding = (max_p - min_p) * 0.08
     
-    fig.update_layout(
-        xaxis=dict(tickvals=list(range(len(plot_df))), ticktext=x_labels, tickfont=dict(size=10, weight="bold"), fixedrange=True),
-        yaxis=dict(range=[min_p - padding, max_p + padding], gridcolor="#eeeeee"),
-        margin=dict(l=15, r=45, t=20, b=20),
-        plot_bgcolor="white",
-        dragmode="pan"  # போனில் இரண்டு விரலால் சுலபமாக நகர்த்தி ஜூம் செய்ய உதவும்
-    )
-    return fig
-
-# திரையில் இன்டராக்டிவ் சார்ட்டைக் காட்டுதல்
-st.plotly_chart(plot_plotly_mobile_engine(sub_df, market_close_price), use_container_width=True, config={'scrollZoom': True})
-
-# --- 5. டேபிள் காட்டுகின்ற பகுதி ---
-st.subheader("📋 Active Data Table")
-st.dataframe(df.set_index("Level"), use_container_width=True)
+    fig
