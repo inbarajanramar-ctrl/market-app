@@ -8,13 +8,13 @@ from matplotlib.backends.backend_pdf import PdfPages
 st.set_page_config(page_title="Advanced Multi-Pivot Matrix", layout="centered")
 
 st.title("📊 Advanced Multi-Pivot Structure Matrix")
-st.write("Calculates Accurate Completed Frames from Daily Market History")
+st.write("Using Completed Previous Frames for 100% Accurate Relationship Analysis")
 
 # --- 1. சிம்பல் செலக்டர் இன்புட் ---
 ticker_options = {
     "Nifty 50": "^NSEI",
-    "Bank Nifty": "^NSEBANK",
     "Sensex": "^BSESN",
+    "Bank Nifty": "^NSEBANK",
     "Reliance": "RELIANCE.NS",
     "TCS": "TCS.NS",
     "HDFC Bank": "HDFCBANK.NS"
@@ -23,47 +23,41 @@ ticker_options = {
 selected_symbol_label = st.selectbox("🎯 Select Instrument / Stock:", list(ticker_options.keys()))
 custom_ticker = st.text_input("✍️ Or Type Custom Yahoo Ticker:", value=ticker_options[selected_symbol_label])
 
-# --- 2. தினசரி டேட்டாவை எடுத்து துல்லியமாக பிரிக்கும் புதிய இன்ஜின் ---
-@st.cache_data(ttl=60)  # 1 நிமிடத்திற்கு ஒருமுறை டேட்டாவை புதுப்பிக்கும்
+# --- 2. வெப்சைட்டில் இருந்து தரவுகளை எடுக்கும் இன்ஜின் ---
+@st.cache_data(ttl=300)
 def fetch_perfect_ohlc_matrix(ticker_symbol):
     ticker = yf.Ticker(ticker_symbol)
     
-    # 2 வருட தினசரி டேட்டாவை எடுக்கிறோம் (இதிலிருந்து வார/மாத லெவல்களை நாமே துல்லியமாகப் பிரிப்போம்)
-    df = ticker.history(period="2y", interval="1d")
+    # தரவுகளை எடுத்தல்
+    df_daily = ticker.history(period="5d", interval="1d")
+    df_weekly = ticker.history(period="2mo", interval="1wk")
+    df_monthly = ticker.history(period="1y", interval="1mo")
     
-    if df.empty or len(df) < 60:
-        st.error("No sufficient data found.")
-        st.stop()
-        
     # தற்போதைய லைவ் விலை (LTP)
     try:
         ltp = ticker.basic_info['lastPrice']
     except:
-        ltp = df['Close'].iloc[-1]
+        ltp = df_daily['Close'].iloc[-1] if not df_daily.empty else 0.0
 
     matrix_data = {}
     
-    # A. DAILY FRAMES (நேற்றைய நாள் vs இன்றைய நாள்)
-    matrix_data["Present Daily"] = {"H": df['High'].iloc[-1], "L": df['Low'].iloc[-1], "C": df['Close'].iloc[-1]}
-    matrix_data["Previous Daily"] = {"H": df['High'].iloc[-2], "L": df['Low'].iloc[-2], "C": df['Close'].iloc[-2]}
+    # A. Daily (நேற்றைய நாள் vs இன்றைய நாள்)
+    if len(df_daily) >= 2:
+        matrix_data["Present Daily"] = {"H": df_daily['High'].iloc[-1], "L": df_daily['Low'].iloc[-1], "C": df_daily['Close'].iloc[-1]}
+        matrix_data["Previous Daily"] = {"H": df_daily['High'].iloc[-2], "L": df_daily['Low'].iloc[-2], "C": df_daily['Close'].iloc[-2]}
     
-    # B. WEEKLY FRAMES (Resampling Daily Data to Weekly Columns)
-    # 'W-SUN' கொடுத்து வாராந்திர இறுதி விலைகளைப் பிரிக்கிறோம்
-    df_weekly = df.resample('W-SUN').agg({'High': 'max', 'Low': 'min', 'Close': 'last'})
-    df_weekly = df_weekly.dropna()
-    
-    # கடைசி வாரம் தற்போதைய ரன்னிங் வாரம் என்பதால், அதற்கு முந்தைய 2 முழுமையான வாரங்களை எடுக்கிறோம்
-    matrix_data["Previous Week"] = {"H": df_weekly['High'].iloc[-2], "L": df_weekly['Low'].iloc[-2], "C": df_weekly['Close'].iloc[-2]}
-    matrix_data["2 Weeks Ago"] = {"H": df_weekly['High'].iloc[-3], "L": df_weekly['Low'].iloc[-3], "C": df_weekly['Close'].iloc[-3]}
-    
-    # C. MONTHLY FRAMES (Resampling Daily Data to Monthly Columns)
-    df_monthly = df.resample('ME').agg({'High': 'max', 'Low': 'min', 'Close': 'last'})
-    df_monthly = df_monthly.dropna()
-    
-    # கடைசி மாதம் ரன்னிங் மாதம் என்பதால், அதற்கு முந்தைய 2 முழுமையான மாதங்களை எடுக்கிறோம்
-    matrix_data["Previous Month"] = {"H": df_monthly['High'].iloc[-2], "L": df_monthly['Low'].iloc[-2], "C": df_monthly['Close'].iloc[-2]}
-    matrix_data["2 Months Ago"] = {"H": df_monthly['High'].iloc[-3], "L": df_monthly['Low'].iloc[-3], "C": df_monthly['Close'].iloc[-3]}
-    
+    # B. Weekly (முடிவடைந்த முந்தைய வாரம் vs அதற்கு முந்தைய வاره)
+    if len(df_weekly) >= 3:
+        # iloc[-1] என்பது நடப்பு ஓடிக்கொண்டிருக்கும் வாரம், அதை நாம் தவிர்க்கிறோம்!
+        matrix_data["Previous Week"] = {"H": df_weekly['High'].iloc[-2], "L": df_weekly['Low'].iloc[-2], "C": df_weekly['Close'].iloc[-2]}
+        matrix_data["2 Weeks Ago"] = {"H": df_weekly['High'].iloc[-3], "L": df_weekly['Low'].iloc[-3], "C": df_weekly['Close'].iloc[-3]}
+        
+    # C. Monthly (முடிவடைந்த முந்தைய மாதம் vs அதற்கு முந்தைய மாதம்)
+    if len(df_monthly) >= 3:
+        # iloc[-1] என்பது நடப்பு ஓடிக்கொண்டிருக்கும் மாதம், அதை நாம் தவிர்க்கிறோம்!
+        matrix_data["Previous Month"] = {"H": df_monthly['High'].iloc[-2], "L": df_monthly['Low'].iloc[-2], "C": df_monthly['Close'].iloc[-2]}
+        matrix_data["2 Months Ago"] = {"H": df_monthly['High'].iloc[-3], "L": df_monthly['Low'].iloc[-3], "C": df_monthly['Close'].iloc[-3]}
+        
     return matrix_data, round(ltp, 2)
 
 # --- 3. ஆட்டோமேட்டிக் லெவல் கால்குலேட்டர் ஃபங்ஷன் ---
@@ -121,7 +115,7 @@ st.success(f"**⏳ Week-on-Week View (2 Weeks Ago ➔ Prev Week):** {w_title}\n\
 st.warning(f"**📅 Day-on-Day View (Prev Daily ➔ Pres Daily):** {d_title}\n\n💡 *{d_desc}*")
 st.error(f"**🎯 Tactical Core View (Prev Week ➔ Pres Daily):** {wd_title}\n\n💡 *{wd_desc}*")
 
-# --- 5. 4 விதமான சார்ட் வியூ பட்டன்கள் ---
+# --- 5. நீங்கள் கேட்ட 4 விதமான சார்ட் வியூ பட்டன்கள் ---
 st.subheader("🎯 View Perspective")
 selected_tab = st.radio("Select View Range:", [
     "Full Structure View", 
@@ -137,6 +131,7 @@ elif selected_tab == "Two Month Relationship":
 elif selected_tab == "Two Week Relationship":
     sub_df = df[df["Level"].isin(["2 Weeks Ago", "Previous Week"])].reset_index(drop=True)
 else:
+    # Two Day + Weekly to Daily கலந்த அனாலிசிஸ் வியூ
     sub_df = df[df["Level"].isin(["Previous Week", "Previous Daily", "Present Daily"])].reset_index(drop=True)
 
 # --- 6. நிலையான Matplotlib சார்ட் என்ஜின் ---
@@ -152,13 +147,13 @@ def plot_mobile_engine(plot_df, ltp):
         
         # Camarilla
         ax.hlines(y=row["H4"], xmin=x - bar_width, xmax=x + bar_width, colors="blue", linewidth=2.5)
-        ax.text(x, row["H4"] + (ltp*0.0005), f'{row["H4"]:.1f}', ha="center", va="bottom", fontsize=8, color="blue", weight="bold")
+        ax.text(x, row["H4"] + 12, f'{row["H4"]:.1f}', ha="center", va="bottom", fontsize=8, color="blue", weight="bold")
         ax.hlines(y=row["H3"], xmin=x - bar_width, xmax=x + bar_width, colors="orange", linewidth=2.5)
-        ax.text(x, row["H3"] + (ltp*0.0005), f'{row["H3"]:.1f}', ha="center", va="bottom", fontsize=8, color="red", weight="bold")
+        ax.text(x, row["H3"] + 12, f'{row["H3"]:.1f}', ha="center", va="bottom", fontsize=8, color="red", weight="bold")
         ax.hlines(y=row["L3"], xmin=x - bar_width, xmax=x + bar_width, colors="orange", linestyles="--", linewidth=2)
-        ax.text(x, row["L3"] - (ltp*0.0005), f'{row["L3"]:.1f}', ha="center", va="top", fontsize=8, color="red", weight="bold")
+        ax.text(x, row["L3"] - 12, f'{row["L3"]:.1f}', ha="center", va="top", fontsize=8, color="red", weight="bold")
         ax.hlines(y=row["L4"], xmin=x - bar_width, xmax=x + bar_width, colors="blue", linestyles="--", linewidth=2)
-        ax.text(x, row["L4"] - (ltp*0.0005), f'{row["L4"]:.1f}', ha="center", va="top", fontsize=8, color="blue", weight="bold")
+        ax.text(x, row["L4"] - 12, f'{row["L4"]:.1f}', ha="center", va="top", fontsize=8, color="blue", weight="bold")
         
         # CPR
         ax.hlines(y=row["TC"], xmin=x - bar_width, xmax=x + bar_width, colors="purple", linestyles=":", linewidth=1.5)
@@ -171,7 +166,7 @@ def plot_mobile_engine(plot_df, ltp):
         ax.plot(x, ltp, marker="o", color="crimson", markersize=5)
         if idx == len(plot_df) - 1: ax.text(x + bar_width + 0.02, ltp, f'LTP:{ltp}', va="center", ha="left", color="crimson", weight="bold", fontsize=8.5)
 
-    # Confluence Shading
+    # Confluence Shading (Pink Bands)
     if "Previous Week" in plot_df["Level"].values and "Present Daily" in plot_df["Level"].values:
         w_row = plot_df[plot_df["Level"] == "Previous Week"].iloc[0]
         d_row = plot_df[plot_df["Level"] == "Present Daily"].iloc[0]
@@ -180,13 +175,14 @@ def plot_mobile_engine(plot_df, ltp):
             for dk in all_keys:
                 if abs(w_row[wk] - d_row[dk]) / w_row[wk] <= 0.0015:
                     y_min, y_max = min(w_row[wk], d_row[dk]), max(w_row[wk], d_row[dk])
-                    ax.axhspan(y_min - (ltp*0.0002), y_max + (ltp*0.0002), xmin=0.1, xmax=0.9, color="#ff00ff", alpha=0.1)
+                    ax.axhspan(y_min - 6, y_max + 6, xmin=0.1, xmax=0.9, color="#ff00ff", alpha=0.1)
 
     ax.set_xticks(x_positions)
     ax.set_xticklabels(plot_df["Level"], fontsize=9.5, weight="bold")
     ax.grid(True, linestyle=":", alpha=0.4)
     ax.set_xlim(-0.5, len(plot_df) - 0.5)
     
+    # Auto-Zoom
     min_p, max_p = min(all_prices), max(all_prices)
     padding = (max_p - min_p) * 0.08
     ax.set_ylim(min_p - padding, max_p + padding)
